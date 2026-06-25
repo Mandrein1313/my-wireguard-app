@@ -10,9 +10,9 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="My WireGuard"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Mywireguardapp"
+        android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar"
         tools:targetApi="31">
 
         <activity
@@ -24,7 +24,7 @@
             </intent-filter>
         </activity>
 
-        <!-- สำคัญ: แก้ปัญหา exported สำหรับ WireGuard -->
+        <!-- WireGuard VPN Service -->
         <service
             android:name="com.wireguard.android.backend.GoBackend$VpnService"
             android:exported="false"
