@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var backend: GoBackend
     private var currentTunnel: Tunnel? = null
-    private var tunnelName = "mywg"
+    private val tunnelName = "mywg"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         btnConnect.setOnClickListener {
             val configText = etConfig.text.toString().trim()
             if (configText.isEmpty()) {
-                Toast.makeText(this, "กรุณาวาง Config ก่อน", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "กรุณาวาง WireGuard Config ก่อน", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             connectVPN(configText, tvStatus)
@@ -45,26 +45,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectVPN(configText: String, statusView: TextView) {
         try {
-            // เตรียม VPN Permission
-            val intent = GoBackend.VpnService.prepare(this)
-            if (intent != null) {
-                startActivityForResult(intent, 1)
+            val prepareIntent = GoBackend.VpnService.prepare(this)
+            if (prepareIntent != null) {
+                startActivityForResult(prepareIntent, 100)
                 statusView.text = "กำลังขอสิทธิ์ VPN..."
                 return
             }
 
-            val config = Config.parse(ByteArrayInputStream(configText.toByteArray()))
-            
-            currentTunnel = backend.createTunnel(tunnelName)  // อาจใช้ createTunnel หรือ setState โดยตรง
+            val config = Config.parse(ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8)))
 
+            currentTunnel = backend.createTunnel(tunnelName)
             backend.setState(currentTunnel!!, Tunnel.State.UP, config)
 
-            statusView.text = "✅ เชื่อมต่อสำเร็จแล้ว"
-            Toast.makeText(this, "เชื่อมต่อ WireGuard สำเร็จ", Toast.LENGTH_LONG).show()
+            statusView.text = "✅ เชื่อมต่อสำเร็จ!"
+            Toast.makeText(this, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
 
         } catch (e: Exception) {
-            statusView.text = "❌ ผิดพลาด: ${e.message}"
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            statusView.text = "❌ Error: ${e.message}"
+            Toast.makeText(this, "เชื่อมต่อล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
     }
@@ -74,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             currentTunnel?.let {
                 backend.setState(it, Tunnel.State.DOWN, null)
                 statusView.text = "⛔ ตัดการเชื่อมต่อแล้ว"
-                Toast.makeText(this, "ตัดการเชื่อมต่อแล้ว", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "ตัดการเชื่อมต่อสำเร็จ", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             statusView.text = "❌ Error: ${e.message}"
@@ -83,8 +81,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            // ผู้ใช้ให้สิทธิ์แล้ว ลองเชื่อมต่อใหม่
+        if (requestCode == 100 && resultCode == RESULT_OK) {
             val etConfig = findViewById<EditText>(R.id.etConfig)
             connectVPN(etConfig.text.toString().trim(), findViewById(R.id.tvStatus))
         }
