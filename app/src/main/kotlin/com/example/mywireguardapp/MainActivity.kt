@@ -69,15 +69,16 @@ class MainActivity : AppCompatActivity() {
                     statusView.text = "✅ เชื่อมต่อสำเร็จ!"
                     Toast.makeText(this@MainActivity, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
                 }
-
-            } catch (e: Exception) {
-                val errorMsg = e.message ?: e.toString()
-                withContext(Dispatchers.Main) {
-                    statusView.text = "❌ Error: $errorMsg"
-                    Toast.makeText(this@MainActivity, "เชื่อมต่อล้มเหลว", Toast.LENGTH_LONG).show()
-                }
-                e.printStackTrace()
-            }
+} catch (e: Exception) {
+    val errorMsg = e.message ?: e.toString()
+    val fullError = e.toString() + "\nCause: " + (e.cause?.toString() ?: "null")
+    
+    withContext(Dispatchers.Main) {
+        statusView.text = "❌ Error: $errorMsg"
+        Toast.makeText(this@MainActivity, fullError.take(300), Toast.LENGTH_LONG).show()
+    }
+    e.printStackTrace()
+}
         }
     }
 
