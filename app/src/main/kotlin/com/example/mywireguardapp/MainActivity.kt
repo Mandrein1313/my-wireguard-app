@@ -11,6 +11,7 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import kotlinx.coroutines.*
 import java.io.ByteArrayInputStream
+// ✅ แก้ไขการ import ให้ถูกต้อง
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
 
     // ==================== SCAN QR CODE ====================
     private fun startQRScan() {
+        // ✅ ใช้ ML Kit อย่างถูกต้อง
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
             .build()
