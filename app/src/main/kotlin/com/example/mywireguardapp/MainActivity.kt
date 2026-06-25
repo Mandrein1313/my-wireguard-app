@@ -1,17 +1,20 @@
 package com.example.mywireguardapp
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import kotlinx.coroutines.*
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +23,10 @@ class MainActivity : AppCompatActivity() {
     private val tunnelName = "mywg"
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
+    private val importFileLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { readConfigFromUri(it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -27,21 +34,35 @@ class MainActivity : AppCompatActivity() {
         backend = GoBackend(this)
 
         val etConfig = findViewById<EditText>(R.id.etConfig)
+        val btnImport = findViewById<Button>(R.id.btnImport)
         val btnConnect = findViewById<Button>(R.id.btnConnect)
         val btnDisconnect = findViewById<Button>(R.id.btnDisconnect)
         val tvStatus = findViewById<TextView>(R.id.tvStatus)
 
+        btnImport.setOnClickListener {
+            importFileLauncher.launch("text/*")
+        }
+
         btnConnect.setOnClickListener {
             val configText = etConfig.text.toString().trim()
             if (configText.isEmpty()) {
-                Toast.makeText(this, "กรุณาวาง Config ก่อน", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "กรุณาวาง Config หรือ Import ไฟล์", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             connectVPN(configText, tvStatus)
         }
 
-        btnDisconnect.setOnClickListener {
-            disconnectVPN(tvStatus)
+        btnDisconnect.setOnClickListener { disconnectVPN(tvStatus) }
+    }
+
+    private fun readConfigFromUri(uri: Uri) {
+        try {
+            val inputStream: InputStream? = contentResolver.openInputStream(uri)
+            val configText = inputStream?.bufferedReader().use { it?.readText() } ?: ""
+            findViewById<EditText>(R.id.etConfig).setText(configText)
+            Toast.makeText(this, "Import Config สำเร็จ", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Import ล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -54,7 +75,6 @@ class MainActivity : AppCompatActivity() {
                 if (prepareIntent != null) {
                     withContext(Dispatchers.Main) {
                         startActivityForResult(prepareIntent, 100)
-                        statusView.text = "กำลังขอสิทธิ์ VPN..."
                     }
                     return@launch
                 }
@@ -63,22 +83,20 @@ class MainActivity : AppCompatActivity() {
                 val config = Config.parse(inputStream)
 
                 currentTunnel = WgTunnel(tunnelName)
-                
+                backend.setState(currentTunnel!!, Tunnel.State.UP, config)
+
                 withContext(Dispatchers.Main) {
-                    backend.setState(currentTunnel!!, Tunnel.State.UP, config)
-                    statusView.text = "✅ เชื่อมต่อสำเร็จ!"
-                    Toast.makeText(this@MainActivity, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
+                    statusView.text = "✅ เชื่อมต่อสำเร็จ (MTU อัตโนมัติ)"
+                    Toast.makeText(this@MainActivity, "เชื่อมต่อสำเร็จ", Toast.LENGTH_LONG).show()
                 }
-} catch (e: Exception) {
-    val errorMsg = e.message ?: e.toString()
-    val fullError = e.toString() + "\nCause: " + (e.cause?.toString() ?: "null")
-    
-    withContext(Dispatchers.Main) {
-        statusView.text = "❌ Error: $errorMsg"
-        Toast.makeText(this@MainActivity, fullError.take(300), Toast.LENGTH_LONG).show()
-    }
-    e.printStackTrace()
-}
+
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: e.toString()
+                withContext(Dispatchers.Main) {
+                    statusView.text = "❌ Error: $errorMsg"
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -93,7 +111,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    statusView.text = "❌ Disconnect Error: ${e.message}"
+                    statusView.text = "❌ Error: ${e.message}"
                 }
             }
         }
