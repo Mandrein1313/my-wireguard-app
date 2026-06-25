@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.wireguard.android.backend.GoBackend
+import com.wireguard.android.backend.Tunnel   // ← สำคัญ
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 
