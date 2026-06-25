@@ -8,14 +8,13 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.wireguard.android.backend.GoBackend
-import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var backend: GoBackend
-    private var currentTunnel: Tunnel? = null
+    private var currentTunnel: WgTunnel? = null
     private val tunnelName = "mywg"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,11 +54,7 @@ class MainActivity : AppCompatActivity() {
             val inputStream = ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8))
             val config = Config.parse(inputStream)
 
-            // สร้าง Tunnel
-            currentTunnel = object : Tunnel {
-                override fun getName() = tunnelName
-            }
-
+            currentTunnel = WgTunnel(tunnelName)
             backend.setState(currentTunnel!!, Tunnel.State.UP, config)
 
             statusView.text = "✅ เชื่อมต่อสำเร็จ!"
@@ -67,7 +62,7 @@ class MainActivity : AppCompatActivity() {
 
         } catch (e: Exception) {
             statusView.text = "❌ Error: ${e.message}"
-            Toast.makeText(this, "ล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "เชื่อมต่อล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
     }
@@ -77,6 +72,7 @@ class MainActivity : AppCompatActivity() {
             currentTunnel?.let {
                 backend.setState(it, Tunnel.State.DOWN, null)
                 statusView.text = "⛔ ตัดการเชื่อมต่อแล้ว"
+                Toast.makeText(this, "ตัดการเชื่อมต่อสำเร็จ", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             statusView.text = "❌ Error: ${e.message}"
