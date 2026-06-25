@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         btnConnect.setOnClickListener {
             val configText = etConfig.text.toString().trim()
             if (configText.isEmpty()) {
-                Toast.makeText(this, "กรุณาวาง WireGuard Config ก่อน", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "กรุณาวาง Config ก่อน", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             connectVPN(configText, tvStatus)
@@ -52,17 +52,22 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val config = Config.parse(ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8)))
+            val inputStream = ByteArrayInputStream(configText.toByteArray(Charsets.UTF_8))
+            val config = Config.parse(inputStream)
 
-            currentTunnel = backend.createTunnel(tunnelName)
+            // สร้าง Tunnel
+            currentTunnel = object : Tunnel {
+                override fun getName() = tunnelName
+            }
+
             backend.setState(currentTunnel!!, Tunnel.State.UP, config)
 
             statusView.text = "✅ เชื่อมต่อสำเร็จ!"
-            Toast.makeText(this, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "WireGuard ทำงานแล้ว", Toast.LENGTH_LONG).show()
 
         } catch (e: Exception) {
             statusView.text = "❌ Error: ${e.message}"
-            Toast.makeText(this, "เชื่อมต่อล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "ล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
     }
@@ -72,7 +77,6 @@ class MainActivity : AppCompatActivity() {
             currentTunnel?.let {
                 backend.setState(it, Tunnel.State.DOWN, null)
                 statusView.text = "⛔ ตัดการเชื่อมต่อแล้ว"
-                Toast.makeText(this, "ตัดการเชื่อมต่อสำเร็จ", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             statusView.text = "❌ Error: ${e.message}"

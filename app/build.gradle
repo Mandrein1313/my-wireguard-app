@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.wireguardapp'
+    namespace 'com.example.mywireguardapp'   // เปลี่ยนตรงนี้ให้ตรงกับโค้ด
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.wireguardapp"
+        applicationId "com.example.mywireguardapp"  // เปลี่ยนตรงนี้ด้วย
         minSdk 24
         targetSdk 34
         versionCode 1
@@ -21,6 +21,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
