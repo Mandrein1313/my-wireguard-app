@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="#FF1F1F1F">
 
     <TextView
         android:layout_width="match_parent"
@@ -11,6 +12,7 @@
         android:text="WireGuard VPN"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:textColor="#FFFFFF"
         android:layout_marginBottom="12dp"/>
 
     <EditText
@@ -19,22 +21,28 @@
         android:layout_height="280dp"
         android:hint="วาง WireGuard .conf ที่นี่..."
         android:inputType="textMultiLine"
-        android:gravity="top|left"
-        android:background="@android:drawable/edit_text"/>
+        android:gravity="top|start"
+        android:background="#FFFFFFFF"
+        android:textColor="#000000"           <!-- สำคัญ: เปลี่ยนเป็นสีดำ -->
+        android:textColorHint="#666666"
+        android:padding="12dp"
+        android:textSize="14sp"/>
 
     <Button
         android:id="@+id/btnConnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="🔗 เชื่อมต่อ"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#8B5CF6"/>
 
     <Button
         android:id="@+id/btnDisconnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="⛔ ตัดการเชื่อมต่อ"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="8dp"
+        android:backgroundTint="#EF4444"/>
 
     <TextView
         android:id="@+id/tvStatus"
@@ -42,6 +50,7 @@
         android:layout_height="wrap_content"
         android:text="สถานะ: Disconnected"
         android:textSize="16sp"
+        android:textColor="#FFFFFF"
         android:layout_marginTop="20dp"/>
 
 </LinearLayout>
