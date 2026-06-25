@@ -24,7 +24,6 @@
             </intent-filter>
         </activity>
 
-        <!-- WireGuard VPN Service -->
         <service
             android:name="com.wireguard.android.backend.GoBackend$VpnService"
             android:exported="false"
@@ -35,5 +34,4 @@
         </service>
 
     </application>
-
 </manifest>
