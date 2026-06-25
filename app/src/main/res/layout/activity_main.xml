@@ -23,10 +23,10 @@
         android:inputType="textMultiLine"
         android:gravity="top|start"
         android:background="#FFFFFFFF"
-        android:textColor="#000000"           <!-- สำคัญ: เปลี่ยนเป็นสีดำ -->
+        android:textColor="#000000"
         android:textColorHint="#666666"
         android:padding="12dp"
-        android:textSize="14sp"/>
+        android:textSize="14sp" />
 
     <Button
         android:id="@+id/btnConnect"
