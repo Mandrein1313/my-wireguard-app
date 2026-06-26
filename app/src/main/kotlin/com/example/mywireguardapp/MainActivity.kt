@@ -11,13 +11,6 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import kotlinx.coroutines.*
 import java.io.ByteArrayInputStream
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private val tunnelName = "mywg"
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
+    // เก็บ Config หลายตัว
     private val configList = mutableListOf<WireGuardConfig>()
     private lateinit var configAdapter: ArrayAdapter<String>
 
@@ -35,8 +29,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var spinnerConfigs: Spinner
 
     data class WireGuardConfig(val name: String, val content: String)
-
-    private var trafficJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,74 +41,53 @@ class MainActivity : AppCompatActivity() {
         tvTraffic = findViewById(R.id.tvTraffic)
         spinnerConfigs = findViewById(R.id.spinnerConfigs)
 
-        // Setup Spinner
+        // Setup Spinner สำหรับเลือก Config
         configAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
         configAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerConfigs.adapter = configAdapter
 
         spinnerConfigs.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: android.view.View?, pos: Int, id: Long) {
-                val cfg = configList[pos]
-                etConfig.setText(cfg.content)
+                if (pos < configList.size) {
+                    etConfig.setText(configList[pos].content)
+                }
             }
             override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
-        findViewById<Button>(R.id.btnScanQR).setOnClickListener { checkCameraPermissionAndScan() }
-        findViewById<Button>(R.id.btnImport).setOnClickListener { importFile() }
+        // ปุ่มต่าง ๆ
+        findViewById<Button>(R.id.btnScanQR).setOnClickListener {
+            Toast.makeText(this, "📷 Scan QR Code ยังอยู่ระหว่างพัฒนา\nใช้ Import .conf ชั่วคราว", Toast.LENGTH_LONG).show()
+        }
+
+        findViewById<Button>(R.id.btnImport).setOnClickListener { importConfigFile() }
         findViewById<Button>(R.id.btnConnect).setOnClickListener { connectVPN() }
         findViewById<Button>(R.id.btnDisconnect).setOnClickListener { disconnectVPN() }
     }
 
-    // ==================== QR CODE SCANNER ====================
-    private fun checkCameraPermissionAndScan() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), 101)
-        } else {
-            startQRScan()
-        }
-    }
-
-    private fun startQRScan() {
-        Toast.makeText(this, "เปิดกล้องสแกน QR Code...", Toast.LENGTH_SHORT).show()
-        
-        // ใช้ ML Kit ง่าย ๆ (เวอร์ชันเต็มต้องใช้ CameraX Preview)
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
-        
-        val scanner = BarcodeScanning.getClient(options)
-        
-        // หมายเหตุ: สำหรับเวอร์ชันเต็ม ควรสร้าง Camera Preview Activity
-        // แต่เพื่อความง่าย ใช้ Intent เลือกรูปภาพ QR Code
-        val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            // ใช้ ML Kit กับรูปภาพ (เวอร์ชันง่าย)
-            Toast.makeText(this, "QR Code Scanner (เวอร์ชันเต็ม) อยู่ระหว่างพัฒนา\nใช้ Import .conf ชั่วคราว", Toast.LENGTH_LONG).show()
-        }
-        pickImage.launch("image/*")
-    }
-
-    // ==================== IMPORT FILE ====================
-    private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    // ==================== IMPORT .conf ====================
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { readConfigFile(it) }
     }
 
-    private fun importFile() {
+    private fun importConfigFile() {
         importLauncher.launch(arrayOf("text/*", "*/*"))
     }
 
     private fun readConfigFile(uri: Uri) {
         try {
             val content = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
-            if (content.contains("[Interface]")) {
+            if (content.contains("[Interface]") && content.contains("PrivateKey")) {
                 val name = "Config-${System.currentTimeMillis()}"
                 configList.add(WireGuardConfig(name, content))
                 refreshSpinner()
                 etConfig.setText(content)
-                Toast.makeText(this, "✅ Import สำเร็จ", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "✅ Import .conf สำเร็จ", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "❌ ไม่ใช่ไฟล์ WireGuard Config", Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Import ล้มเหลว", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Import ล้มเหลว: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -127,18 +98,23 @@ class MainActivity : AppCompatActivity() {
         configAdapter.notifyDataSetChanged()
     }
 
-    // ==================== CONNECT & TRAFFIC ====================
+    // ==================== CONNECT / DISCONNECT ====================
     private fun connectVPN() {
         val configText = etConfig.text.toString().trim()
-        if (configText.isEmpty()) return
+        if (configText.isEmpty()) {
+            Toast.makeText(this, "กรุณาใส่ Config หรือ Import ไฟล์", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         tvStatus.text = "กำลังเชื่อมต่อ..."
 
         scope.launch(Dispatchers.IO) {
             try {
-                val prepare = GoBackend.VpnService.prepare(this@MainActivity)
-                if (prepare != null) {
-                    withContext(Dispatchers.Main) { startActivityForResult(prepare, 100) }
+                val prepareIntent = GoBackend.VpnService.prepare(this@MainActivity)
+                if (prepareIntent != null) {
+                    withContext(Dispatchers.Main) {
+                        startActivityForResult(prepareIntent, 100)
+                    }
                     return@launch
                 }
 
@@ -148,39 +124,29 @@ class MainActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     tvStatus.text = "✅ เชื่อมต่อสำเร็จ"
-                    startTrafficMonitor()
+                    Toast.makeText(this@MainActivity, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    tvStatus.text = "❌ ${e.message}"
+                    tvStatus.text = "❌ Error: ${e.message}"
+                    Toast.makeText(this@MainActivity, "เชื่อมต่อล้มเหลว", Toast.LENGTH_LONG).show()
                 }
-            }
-        }
-    }
-
-    private fun startTrafficMonitor() {
-        trafficJob?.cancel()
-        trafficJob = scope.launch(Dispatchers.IO) {
-            while (isActive) {
-                delay(1000)
-                try {
-                    val stats = backend.getTunnelStatistics(currentTunnel?.getName() ?: tunnelName)
-                    withContext(Dispatchers.Main) {
-                        tvTraffic.text = "Traffic: ↓ ${stats.rxBytes / 1024} KB | ↑ ${stats.txBytes / 1024} KB"
-                    }
-                } catch (_: Exception) {}
             }
         }
     }
 
     private fun disconnectVPN() {
-        trafficJob?.cancel()
         scope.launch(Dispatchers.IO) {
-            currentTunnel?.let {
-                backend.setState(it, Tunnel.State.DOWN, null)
+            try {
+                currentTunnel?.let {
+                    backend.setState(it, Tunnel.State.DOWN, null)
+                    withContext(Dispatchers.Main) {
+                        tvStatus.text = "⛔ ตัดการเชื่อมต่อแล้ว"
+                    }
+                }
+            } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    tvStatus.text = "⛔ ตัดการเชื่อมต่อแล้ว"
-                    tvTraffic.text = "Traffic: rx: 0 B | tx: 0 B"
+                    tvStatus.text = "❌ Disconnect Error"
                 }
             }
         }
@@ -194,7 +160,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        trafficJob?.cancel()
         scope.cancel()
         super.onDestroy()
     }
