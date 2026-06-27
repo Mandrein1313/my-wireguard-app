@@ -100,10 +100,18 @@ class MainActivity : AppCompatActivity() {
 
     // ==================== CONNECT / DISCONNECT ====================
 private fun connectVPN() {
-    val configText = etConfig.text.toString().trim()
+    var configText = etConfig.text.toString().trim()
     if (configText.isEmpty()) {
         Toast.makeText(this, "กรุณาใส่ Config", Toast.LENGTH_SHORT).show()
         return
+    }
+
+    // เพิ่ม MTU อัตโนมัติถ้ายังไม่มี
+    if (!configText.contains("MTU")) {
+        configText += "\nMTU = 1280"
+    }
+    if (!configText.contains("Table")) {
+        configText += "\nTable = 51820"
     }
 
     tvStatus.text = "กำลังเชื่อมต่อ..."
@@ -124,17 +132,14 @@ private fun connectVPN() {
             backend.setState(currentTunnel!!, Tunnel.State.UP, config)
 
             withContext(Dispatchers.Main) {
-                tvStatus.text = "✅ เชื่อมต่อสำเร็จ"
-                Toast.makeText(this@MainActivity, "WireGuard เชื่อมต่อแล้ว", Toast.LENGTH_LONG).show()
+                tvStatus.text = "✅ เชื่อมต่อสำเร็จ (MTU Fixed)"
+                Toast.makeText(this@MainActivity, "เชื่อมต่อสำเร็จ", Toast.LENGTH_LONG).show()
             }
-
         } catch (e: Exception) {
-            val errorMsg = e.message ?: "Unknown error"
-            val fullError = e.toString() + "\nCause: " + (e.cause?.message ?: "null")
-            
+            val errorMsg = e.message ?: e.toString()
             withContext(Dispatchers.Main) {
                 tvStatus.text = "❌ Error: $errorMsg"
-                Toast.makeText(this@MainActivity, fullError.take(400), Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
             }
             e.printStackTrace()
         }
